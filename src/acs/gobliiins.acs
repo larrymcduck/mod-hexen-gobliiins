@@ -1,0 +1,542 @@
+#library "gobliiins"
+#include "zcommon.acs"
+
+// map01
+int punched = 0;
+int magic_wall[4];
+
+// map02
+int platforms[255];
+int glass_broken = 0;
+int give_green_staff = 0;
+int give_blue_staff = 0;
+int grateOpen = 0;
+int platformMoving = 0;
+int bishop_activated = 0;
+
+function int disable_player_movement (int movement_flag)
+{
+    if (movement_flag == 1)
+    {
+        Thing_Stop(1);
+        Thing_Stop(2);
+        Thing_Stop(3);
+    }
+
+    SetPlayerProperty(1, movement_flag, PROP_TOTALLYFROZEN);
+    
+    return 0;
+}
+
+script 998 ENTER
+{
+	give_green_staff = 0;
+	give_blue_staff = 0;
+    TakeInventory("g_switch_fighter", 999);
+    TakeInventory("g_switch_cleric", 999);
+    TakeInventory("g_switch_mage", 999);
+    GiveInventory("g_switch_cleric", 1);
+    GiveInventory("g_switch_mage", 1);
+	Thing_ChangeTID(0, 1);
+}
+
+
+script 997 (int item)
+{
+    print(s:"Only the Cleric can use items.");
+    str spawn_item = "";
+    switch (item)
+    {
+        case 0:
+            spawn_item = "g_skull";
+            break;            
+        case 1:
+            spawn_item = "g_mask";
+    }
+
+    Spawn(spawn_item, GetActorX(2), GetActorY(2), GetActorZ(2));
+}
+
+script 996 (int duration, int look_at_tid)
+{	
+	if (look_at_tid > 0)
+	{
+	}
+	
+	disable_player_movement(1);
+    Delay(duration);
+	disable_player_movement(0);
+}
+
+script 995 (void)
+{
+    int newHealth = GetActorProperty(0, APROP_Health);
+    SetActorProperty(1, APROP_Health, newHealth);
+    SetActorProperty(2, APROP_Health, newHealth);
+    SetActorProperty(3, APROP_Health, newHealth);
+}
+
+script 1 (int switch_to_class)
+{
+	Thing_ChangeTID(0, 0);
+	if (CheckInventory("g_cleric_green_staff"))
+	{
+		give_green_staff = 1;
+	}
+	if (CheckInventory("g_cleric_blue_staff"))
+	{
+		give_blue_staff = 1;
+	}
+
+    int switch_from_class = -1;
+    str switch_from = "";
+    if (CheckWeapon("g_fighterweapon"))
+    {
+        switch_from_class = 1;
+        switch_from = "g_placeholder_fighter";
+        GiveInventory("g_switch_fighter", 1);
+    }
+    else if (CheckWeapon("g_mageweapon"))
+    {
+        switch_from_class = 3;
+        switch_from = "g_placeholder_mage";
+        GiveInventory("g_switch_mage", 1);
+    }
+    else
+    {
+        switch_from_class = 2;
+        switch_from = "g_placeholder_cleric";
+        GiveInventory("g_switch_cleric", 1);
+    }
+                
+    str switch_to = "";
+    switch (switch_to_class)
+    {
+        case 1:
+            switch_to = "g_fighter";
+            TakeInventory("g_switch_fighter", 999);
+            break;
+        case 2:
+            switch_to = "g_cleric";
+            TakeInventory("g_switch_cleric", 999);
+            break;
+        case 3:
+            switch_to = "g_mage";
+            TakeInventory("g_switch_mage", 999);
+            break;
+        default:
+            terminate;
+    }
+	
+	if (GetActorVelZ(0) != 0)
+	{
+		switch (switch_to_class)
+		{
+			case 1:
+				GiveInventory("g_switch_fighter", 1);
+				break;
+			case 2:
+				GiveInventory("g_switch_cleric", 1);
+				break;
+			case 3:
+				GiveInventory("g_switch_mage", 1);
+				break;
+		}
+		terminate;
+	}
+    
+    if (switch_from_class == switch_to_class)
+    {
+        terminate;
+    }
+    
+    int health = GetActorProperty(0, APROP_Health);
+
+    UnmorphActor(0);
+    if (switch_to_class > 1)
+    {
+        MorphActor(0,switch_to, "", 0x7FFFFFFD, 0, "g_morphflash", "g_morphflash");
+    }
+
+	if (give_green_staff)
+	{
+		GiveInventory("g_cleric_green_staff", 1);
+	}
+	if (give_blue_staff)
+	{
+		GiveInventory("g_cleric_blue_staff", 1);
+	}
+
+    SetActorProperty(0, APROP_Health, health);
+    
+    Spawn(switch_from, GetActorX(0), GetActorY(0), GetActorZ(0), switch_from_class, GetActorAngle(0) >> 8);
+    SetActorPosition(0, GetActorX(switch_to_class), GetActorY(switch_to_class), GetActorZ(switch_to_class), 0);
+    SetActorAngle(0, GetActorAngle(switch_to_class));
+    Thing_Remove(switch_to_class);
+	Thing_ChangeTID(0, switch_to_class);
+}
+
+script 2 (int itemNum)
+{
+    if (CheckWeapon("g_fighterweapon") || CheckWeapon("g_mageweapon"))
+    {
+        ACS_Execute(997, 0, itemNum);
+        terminate;
+    }
+
+    switch (itemNum)
+    {
+        case 0:
+            ACS_Execute(4, 0);
+            break;
+        case 1:
+            break;
+    }
+}
+
+script 3 (void)
+{
+    if (punched == 1 || !CheckWeapon("g_fighterweapon"))
+    {
+        terminate;
+    }
+    
+    SetActorState (4, "Punched");
+    Spawn("g_skull", 320 << 16, 32  << 16, 200  << 16);
+    punched = 1;
+}
+
+
+script 4 (void)
+{
+	disable_player_movement(1);
+    ChangeCamera(7, 0, 0);
+    Delay(35);
+    Thing_Activate(6);
+    SetActorState (5, "Lightning");
+    Spawn("g_stick", GetActorX(5), GetActorY(5), 128 << 16);
+    Delay(70);
+    ChangeCamera(0, 0, 0);
+	disable_player_movement(0);
+}
+
+script 5 (int lineNum)
+{
+    int weaponCheck = 0;
+    int lineNumIndex = lineNum - 1;
+    
+    if (ClassifyActor(0) & ACTOR_MISSILE)
+    {
+        weaponCheck = 1;
+    }
+    else if (ClassifyActor(0) & ACTOR_PLAYER)
+    {
+        weaponCheck = 2;
+    }
+    
+    if (weaponCheck == 0 || magic_wall[lineNumIndex] != weaponCheck - 1)
+    {
+        terminate;
+    }
+    else
+    {
+        magic_wall[lineNumIndex]++;
+    }
+    
+    if (weaponCheck == 1)
+    {
+        Line_SetTextureOffset(lineNum, 0, 0, SIDE_FRONT, 2);
+        SetLineTexture(lineNum, SIDE_FRONT, TEXTURE_MIDDLE, "GLASS05");
+    }
+    else if (weaponCheck == 2)
+    {
+        ActivatorSound("GlassShatter", 127);
+        SetLineBlocking(lineNum, BLOCK_NOTHING);
+        SetLineTexture(lineNum, SIDE_FRONT, TEXTURE_MIDDLE, "GLASS07");
+
+        switch (lineNum)
+        {
+            case 1:
+                Thing_Remove(2);
+                Thing_Remove(3);
+				disable_player_movement(1);
+                SetActorAngle(0, 0.5);
+                while (GetActorProperty(0, APROP_Health) > 0)
+                {
+                    Thing_Stop(0);
+                    SetActorPosition(0, -1648 << 16, -2016 << 16, 136 << 16, 0);
+                    SpawnProjectile(8, "RipperBall", 0, 60, 0, 0, 0);
+                    Delay(5);
+                }
+                break;
+            case 3:
+				disable_player_movement(1);
+                SetActorAngle(0, 0.5);
+                SetActorPosition(0, -1648 << 16, -1632 << 16, 136 << 16, 0);
+                SpawnProjectile(9, "PoisonDart", 0, 60, 0, 0, 0);
+                Delay(8);
+				disable_player_movement(0);
+                break;
+        }
+    }
+}
+
+script 6 (int sector)
+{
+    FloorAndCeiling_RaiseByValue(sector, 8, 152);
+}
+
+script 7 (void)
+{
+    if (CheckWeapon("g_fighterweapon") || CheckWeapon("g_mageweapon") || !CheckInventory("g_mask"))
+    {
+        terminate;
+    }
+    
+    ActivatorSound("PuzzleSuccess", 127);
+    TakeInventory("g_mask", 999);
+    SetLineTexture(5, SIDE_FRONT, TEXTURE_MIDDLE, "FIRE14");
+    Floor_LowerInstant(1, 0, 16);
+}
+
+script 8 (int lineNum)
+{
+	int platformSector = 0;
+	int speed = 0;
+	int distance = 0;
+	str new_texture = "";
+	
+	if (platforms[lineNum] == 1)
+	{
+		terminate;
+	}
+	
+	switch (lineNum)
+	{
+		case 1:
+			platformSector = 1;
+			speed = 8;
+			distance = 96;
+			new_texture = "SPAWN12";
+			break;
+		case 5:
+			platformSector = 12;
+			speed = 24;
+			distance = 256;
+			new_texture = "SPAWN12";
+			break;
+	}
+
+    if (ClassifyActor(0) & ACTOR_PLAYER)
+    {
+        terminate;
+    }
+	
+    SetLineTexture(lineNum, SIDE_FRONT, TEXTURE_BOTTOM, new_texture);
+    Floor_LowerByValue(platformSector, speed, distance);
+    FloorAndCeiling_LowerByValue(platformSector + 1, speed, distance);
+
+	platforms[lineNum] = 1;
+}
+
+script 9 (int position)
+{
+    if (!CheckWeapon("g_fighterweapon"))
+    {
+        terminate;
+    }
+    	
+	int x = 0;
+	int y = 0;
+	int z = 0;
+	int velY = 0;
+	int velZ = 0;
+	int delayTics = 0;
+	
+	
+	switch (position)
+	{
+		case 0:
+			x = 224;
+			y = -152;
+			z = 0;
+			velY = -6;
+			velZ = 20;
+			delayTics = 35;
+			break;
+		case 1:
+			x = 96;
+			y = -1152;
+			z = -512;
+			velY = 4;
+			velZ = 24;
+			delayTics = 50;
+			break;
+	}
+		
+	if (GetActorZ(0) != z << 16)
+	{
+		terminate;
+	}
+	
+	disable_player_movement(1);
+    SetActorPosition(0, x << 16, y << 16, z << 16, 0);
+    SetActorVelocity(0, 0, velY << 16, velZ << 16, 0, 0);
+    Delay(delayTics);
+	disable_player_movement(0);
+}
+
+script 10 (void)
+{
+    if (glass_broken == 1 || !CheckWeapon("g_fighterweapon"))
+    {
+        terminate;
+    }
+    
+    glass_broken = 1;
+    ActivatorSound("GlassShatter", 127);
+    SetLineBlocking(2, BLOCK_NOTHING);
+    SetLineBlocking(3, BLOCK_NOTHING);
+    SetLineTexture(2, SIDE_FRONT, TEXTURE_MIDDLE, "GLASS07");
+    SetLineTexture(2, SIDE_BACK, TEXTURE_MIDDLE, "GLASS07");
+    Stairs_BuildDownSync(3, 4, 8, 0);
+}
+
+script 11 (int staffNum)
+{
+    switch (staffNum)
+    {
+        case 0:
+            if (CheckWeapon("g_cleric_green_staff"))
+            {
+                TakeInventory("g_cleric_green_staff", 999);
+                Spawn("g_cleric_green_staff", -160 << 16, -120 << 16, 96 << 16, 100, 0);
+                SetThingSpecial(100, 80, 11, 0, 1);
+            }
+            GiveInventory("g_cleric_blue_staff", 1);
+            SetWeapon("g_cleric_blue_staff");
+            break;
+        case 1:
+            if (CheckWeapon("g_cleric_blue_staff"))
+            {
+                TakeInventory("g_cleric_blue_staff", 999);
+                Spawn("g_cleric_blue_staff", -160 << 16, -224 << 16, 96 << 16, 101, 0);
+                SetThingSpecial(101, 80, 11, 0, 0);
+            }
+            GiveInventory("g_cleric_green_staff", 1);
+            SetWeapon("g_cleric_green_staff");
+            break;
+    }
+}
+
+script 12 (void)
+{
+    if (grateOpen == 1 || !CheckWeapon("g_cleric_blue_staff"))
+    {
+        terminate;
+    }
+  
+    grateOpen = 1;
+    GiveInventory("g_clericweapon", 1);
+    SetWeapon("g_clericweapon");
+    TakeInventory("g_cleric_blue_staff", 999);
+    TakeInventory("g_cleric_green_staff", 999);
+    SetLineTexture(4, SIDE_FRONT, TEXTURE_MIDDLE, "F_084");
+    Thing_Remove(100);
+    Thing_Remove(101);
+    
+    FloorAndCeiling_LowerByValue(7, 24, 304);
+    SetActorPitch(7, 8000);
+	disable_player_movement(1);
+    ChangeCamera(7, 0, 0);
+    Delay(70);
+    ChangeCamera(0, 0, 0);
+	disable_player_movement(0);
+}
+
+script 13 (void)
+{
+    Thing_Stop(0);
+
+    Ceiling_LowerInstant(6, 0, 28);
+    SetActorPosition(1, -240 << 16, -704 << 16, -256 << 16, 0);
+    SetActorAngle(1, 0.75);
+    SetActorPosition(2, -192 << 16, -704 << 16, -256 << 16, 0);
+    SetActorAngle(2, 0.75);
+    SetActorPosition(3, -144 << 16, -704 << 16, -256 << 16, 0);
+    SetActorAngle(3, 0.75);
+}
+
+script 14 (void)
+{
+    if (platformMoving == 1 || !CheckWeapon("g_fighterweapon"))
+    {
+        terminate;
+    }
+    
+    platformMoving = 1;
+    
+    Floor_LowerByValue(11, 64, 252);
+    Delay(35 * 5);
+    Floor_RaiseByValue(11, 64, 252);
+    Delay(35 * 2);
+    platformMoving = 0;
+}
+
+script 15 (void)
+{
+    if (bishop_activated == 1)
+    {
+        terminate;
+    }
+
+    bishop_activated = 1;
+	
+    Delay(105);
+    
+    disable_player_movement(1);
+    
+    ChangeCamera(15, 0, 0);
+
+    Plat_DownWaitUpStayLip(16, 12, 3745, 0);
+    
+    Delay(105);
+
+    ACS_Execute(16, 0);
+
+    Delay(140);
+    ChangeCamera(0, 0, 0);
+    disable_player_movement(0);
+}
+
+script 16 (void)
+{
+    int mapSpot = 18;
+    bool done = false;
+    int change = 1;
+    int max = 69;
+    
+    while (mapSpot != 17)
+    {
+        Thing_Move(17, mapSpot, 1);
+        Delay(35);
+        mapSpot += change;
+        
+        if (mapSpot == max)
+        {
+            change = -1;
+        }
+    }
+
+    Thing_Remove(17);
+    Spawn("g_bishop", -848 << 16, -824 << 16, -304 << 16, 0, 0);
+
+    disable_player_movement(1);
+    
+    ChangeCamera(15, 0, 0);
+
+    Delay(105);
+
+    ChangeCamera(0, 0, 0);
+    disable_player_movement(0);
+}

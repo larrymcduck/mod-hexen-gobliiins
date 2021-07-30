@@ -1,0 +1,29 @@
+clearskills
+
+skill hard
+{
+	DoubleAmmoFactor = 1.5
+	SpawnFilter = Hard
+	picname = "M_ULTRA"
+}
+
+MAP Map01 "map01"
+{
+	warptrans = 1
+	levelnum = 1
+	sky1 = SKY2
+	cdtrack = 13
+	next = Map02
+	cluster = 1
+}
+
+MAP Map02 "map02"
+{
+	warptrans = 2
+	levelnum = 2
+	sky1 = SKY4
+	cdtrack = 2
+	next = Map03
+	cluster = 1
+}
+

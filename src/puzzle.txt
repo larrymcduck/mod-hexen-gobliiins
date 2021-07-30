@@ -1,0 +1,205 @@
+actor g_arch_statue 20003
+{
+	Tag "Gold Statue"
+	Height 16
+	Radius 16
+	+SOLID
+	States
+	{
+		Spawn:
+			STWN B -1
+			Stop
+		Punched:
+			STWN A -1
+			Stop
+	}
+}
+
+actor g_tree_1 20004
+{
+	Tag "Tree (Gobliiins)"
+	Height 128
+	Radius 24
+	+SOLID
+	States
+	{
+		Spawn:
+			TRDT A -1
+			Stop
+		Lightning:
+			TRDT B 0 A_NoBlocking
+			TRDT BCDEF 4
+			TRDT G -1
+			Stop
+	}
+}
+
+actor g_puzzle_item : CustomInventory
+{
+	Height 16
+	Radius 8
+	Inventory.MaxAmount 1
+	Inventory.RestrictedTo "g_cleric"
+	+Inventory.Invbar
+}
+
+actor g_inventory_item : Inventory
+{
+	Height 16
+	Radius 8
+	Inventory.MaxAmount 1
+	Inventory.RestrictedTo "g_cleric"
+	+Inventory.Invbar
+}
+
+actor g_skull : g_puzzle_item
+{
+	Inventory.Icon "ARTISKLL"
+	Inventory.PickupMessage "Skull"
+	Tag "Skull"
+
+	States
+	{
+		Spawn:
+			ASKU A -1
+			Stop
+		Use:
+			TNT1 A 0 ACS_Execute(2, 0, 0)
+			Stop
+	}
+}
+
+actor g_need_magic
+{
+	+NOBLOOD
+	+SHOOTABLE
+	+SOLID
+	Health 1
+	DamageFactor "Fighter", 0
+}
+
+actor g_stick : g_need_magic
+{
+	Height 32
+	Radius 8
+
+	States
+	{
+		Spawn:
+			SWMV A -1
+			Stop
+		Death:
+			TNT1 A 0 A_SpawnItemEx("g_mask")
+			Stop
+	}
+}
+
+actor g_mask : g_inventory_item
+{
+	Inventory.Icon "ARTISKL2"
+	Inventory.PickupMessage "Flame Mask"
+	Tag "Flame Mask"
+	States
+	{
+		Spawn:
+			ASK2 A -1
+			Stop
+	}
+}
+
+actor g_minotaur 20005
+{
+	Tag "Minotaur (Gobliiins)"
+	Monster
+	Mass 0x7FFFFFFD
+	Height 100
+	Radius 32
+	Health 1
+	PainChance 256
+	MeleeRange 128
+
+	DamageFactor "Fighter", 0
+	DamageFactor "Mage", 0
+	DamageFactor "Cleric_GreenStaff", 1
+	DamageFactor "Cleric_BlueStaff", 0
+
+	DeathSound "minotaur/death"
+
+	States
+	{
+		Spawn:
+			MNTR A 1
+			Loop
+		Pain.Fighter:
+		Pain.Mage:
+		Pain.Cleric_BlueStaff:
+			MNTR V 0 ACS_Execute(996, 0, 20, 0)
+			MNTR V 0 A_FaceTarget
+			MNTR V 10
+			MNTR Y 4 
+			MNTR Z 9 A_CustomMeleeAttack((15), "FighterHammerHitThing")
+			Goto Spawn
+		Death:
+			MNTR E 6
+			MNTR E 2 A_Scream
+			MNTR E 5 A_SpawnItemEx("MinotaurSmokeExit")
+			MNTR E 5
+			MNTR E 5 A_NoBlocking
+			MNTR E 5
+			MNTR E 5 A_SetTranslucent(0.66, 0)
+			MNTR E 5 A_SetTranslucent(0.33, 0)
+			MNTR E 10 A_BossDeath
+			Stop
+	}
+}
+
+actor g_bishop 20008
+{
+	Tag "Bishop (Gobliiins)"
+	Health 100
+	Height 64
+	Radius 16
+	-SOLID
+	-SHOOTABLE	
+
+	States
+	{
+		Spawn:
+			BISH A -1
+			Stop
+	}
+}
+
+actor g_bishop_activator : g_need_magic 20009
+{
+	Height 72
+	Radius 24
+	Tag "Bishop Activator"
+	+SHOOTABLE
+	+SOLID
+	+NOGRAVITY
+	States
+	{
+		Spawn:
+			FBUL H -1
+			Stop
+		Death:
+			FBUL I 0 A_PlaySound("Ignite")
+			FBUL IJ 4 Bright
+			FBUL J 0 ACS_Execute(15, 0)
+			FBUL J 0 A_NoBlocking
+			FBUL J 0 A_SpawnItemEx("g_bishop_activated")
+			Stop
+	}
+}
+
+actor g_bishop_activated : g_bishop_activator
+{
+	-SHOOTABLE
+	States
+	{
+		Spawn:
+			FBUL ABCDEFG 4 Bright
+			Loop
+	}
+}
